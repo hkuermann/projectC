@@ -1,0 +1,277 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>MAT101 Python, Project C</title>
+</head>
+<h1>Project C: LU, QR, Cholesky Decomposition</h1>
+<h2>0. GOAL</h2>
+We are going to implement the LU, QR and Cholesky decompositions. Our implementations have two modes: one aimed at computing those decompositions, and one aimed at explaining those decompositions. In this last mode, we proceed step by step, giving a visual highlight on a presentation of the matrix and a textual explanation of what is going on.
+Basically we want to write the perfect program to explain to a numerics student what is going on in those decompositions.
+<br />
+Finally, we also want to show the differences between our pure python decomposition and the built-in modules in python. 
+<br />
+<br />
+<h2>1. LU DECOMPOSITION</h2>
+<h3>1.1 From Gaussian elimination to a LU decomposition</h3>
+In linear algebra, Gaussian elimination is an algorithm for solving systems of linear equations. The LU decomposition allows us to study how computers usually solve square systems of linear equation.
+<br />
+<br />
+The LU decomposition factors a nonsingular matrix \(A\) as the product of a lower triangular matrix \(L\) and an upper triangular matrix \(U\): \(A=LU\)
+<br />
+<br />
+Example: \( \begin{pmatrix \)
+<br />
+<br />
+<h3>1.2 Permutation matrix</h3>
+Without a proper ordering of permutations in the matrix, the factorization by computer may fail. For example, we can verify that \(a_{11}=l_{11}u_{11}\). If \{a_{11}=0\), then \(l_{11}=0\) or \(u_{11}=0\) , which implies either \(L\) or \(U\) is singular. This is impossible if \(A\) is nonsingular.
+<br />
+<br />
+This problem can be removed by reordering the rows of the matrix so that the first element of the permuted matrix is nonzero. The same problem in subsequent factorization steps can be removed the same way.
+<br />
+<br />
+This proper permutation in rows is enough to bring the LU factorization to work. In partial pivoting, the algorithm selects the entry with largest absolute value from the column of the matrix that is currently being considered as the pivot element. 
+<br />
+<br />
+In our program, we will implement the LU factorization with partial pivoting, i.e. \(PA=LU\), where \(L\) and \(U\) are again lower and upper triangular matrices, and \(P\) is the permutation matrix which reorders the rows of \(A\). This is also called LUP decomposition.
+<br />
+<br />
+<h3>1.3 Doolittle‘s LUP decomposition</h3>
+We will make use of the Doolittle's LUP decomposition with partial pivoting to decompose our matrix \(A\) into \(PA=LU\), where \(L\) is a lower triangular matrix, \(U\) is an upper triangular matrix and \(P\) is a permutation matrix. \(P\) is needed, as said above, to resolve certain singularity issues. The algorithm is provided as follows.
+<br />
+<br />
+To calculate the upper triangular section we use the following formula for elements of \(U\):
+<br />
+<br />
+\[u_{ij} = a_{ij}-\sum_{k=1}^{i-1}u_{kj}l_{ik} \]
+<br />
+<br />
+The formula for elements of the lower triangular matrix L is similar, except that we need to divide each term by the corresponding diagonal element of U. To ensure that the algorithm is numerically stable when \(u_{jj}\ll 0\), a pivoting matrix \(P\) is used to reorder \(A\) so that the largest element of each column of \(A\) gets shifted to the diagonal of \(A\). The formula for elements of \(L\) follows:
+<br />
+<br />
+\[l_{ij}=\frac{1}{u_{jj}\left(a_{ij}-\sum_{k=1}^{i-1}u_{kj}l_{ij}\right) \]
+<br />
+<br />
+Here, \(a_{ij}\) is the element in i-th row and j-th column of the permutated matrix \(P*A\).
+<br />
+<br />
+<h2>2. QR DECOMPOSITION</h2>
+Orthogonal matrix triangularization (QR decomposition) reduces a real \(m \times n\) matrix \(A\) with \(m \ge n\)  and full rank to a much simpler form. It guarantees numerical stability by minimizing errors caused by machine roundoffs. A suitably chosen orthogonal matrix \(Q\) will triangularize the given matrix:
+<br />
+<br />
+\[ A = Q \begin{bmatrix} R \\ 0 \end{bmatrix} \]
+<br />
+<br />
+with the \(n \times n\) right triangular matrix \(R\). One only has then to solve the triangular system \(Rx = Pb\), where \(P\) consists of the first \(n\) rows of \(Q\).
+<br />
+<br />
+The least squares problem \(Ax \approx b\) is easy to solve with \(A = QR\) and \(Q\) an orthogonal matrix (here and henceforth \(R\) is the entire \( m \times n \) augmented matrix from above). The solution
+<br />
+<br />
+\[x = (A^TA)^{-1} A^Tb\]
+<br />
+<br />
+becomes
+<br />
+<br />
+\[x = (R^TQ^TQR)^{-1}R^TQ^Tb = (R^TR)^{-1}R^TQ^Tb = R^{-1}Q^Tb\]
+<br />
+<br />
+This is a matrix-vector multiplication \(Q^Tb\), followed by the solution of the triangular system \(Rx = Q^Tb\) by back-substitution. The QR factorization saves us the formation of \(A^TA\) and the solution of the normal equations.
+<br />
+<br />
+Many different methods exist for the QR decomposition. We are implementing the Householder transformation.
+<br />
+<br />
+The Householder transformation is the most frequently used algorithm for performing QR decomposition. The key object here is the Householder matrix $H$, a symmetric and orthogonal matrix of the form
+<br />
+<br />
+\[ H = I - 2xx^T \],
+<br />
+<br />
+where \(I\) is the identity matrix and we have used any normalized vector \(x\) with \(||x||_2^2 = x^Tx = 1\).
+<br />
+<br />
+The Householder transformation zeroes the last \(m-1\) elements of a column vector below the first element:
+<br />
+<br />
+\[ \begin{bmatrix}v_1 \\ v_2 \\ \vdots \\ v_m \end{bmatrix} \rightarrow \begin{bmatrix}c \\ 0 \\ \vdots \\ 0 \end{bmatrix} \text{with}\; c = \pm ||v||_2 = \pm \left(\sum_{i=1}^m v_i^2\right)^{1/2} \]
+<br />
+<br />
+One can verify that
+<br />
+<br />
+\[ x = f \begin{bmatrix}v_1 - c \\ v_2 \\ \vdots \\ v_m \end{bmatrix} \text{with}\; f=\frac{1}{\sqrt{2c(c-v_1)}} \]
+<br />
+<br />
+fulfils \( x^Tx=1 \) and that with \(H=I-2xx^T\) one obtains the vector \(\begin{bmatrix}c & 0 & \cdots & 0 \end{bmatrix}^T\).
+<br />
+<br />
+To perform the decomposition of the \(m \times n\) matrix \(A = QR\) (with \(m \ge n\)) we construct an \(m \times m\) matrix \(H^{(1)}\) to change the \(m-1\) elements of the first column to zero.  Similarly, an \(m-1 \times m-1\) matrix \(G^{(2)}\) will change the \(m-2\) elements of the second column to zero. With \(G^{(2)}\) we produce the \(m \times m\) matrix
+<br />
+<br />
+\[ H^{(2)} = \begin{bmatrix}1 & 0 & \cdots & 0 \\ 0 & \; & \; & \; \\ \vdots & \; & G^{(2)} & \; \\ 0 & \; & \; & \; \end{bmatrix} \]
+<br />
+<br />
+After \(n\) such orthogonal transformations (\(n-1\) times in the case that \(m=n\)), we let
+<br />
+<br />
+\[ R = H^{(n)}\cdots H^{(2)}H^{(1)}A \]
+<br />
+<br />
+\(R\) is upper triangular and the orthogonal matrix \(Q\) becomes
+<br />
+<br />
+\[ Q = H^{(1)}H^{(2)} \cdots H^{(n)}\].
+<br />
+<br />
+<h2>3. CHOLSKY DECOMPOSITION</h2>
+A symmetric and positive definite matrix can be efficiently decomposed into a lower and upper triangular matrix. For a matrix of any type, this is achieved by the LU decomposition which factorizes $A = LU$. If $A$ satisfies the above criteria, one can decompose more efficiently into $A=LL^T$ where $L$ is a lower triangular matrix with positive diagonal elements. $L$ is called the \emph{Cholesky triangle}.
+<br />
+<br />
+The Cholesky decomposition assumes that the matrix being decomposed is Hermitian and positive-definite. Since we are only interested in real-valued matrices, we can replace the property of Hermitian with that of symmetric (i.e. the matrix equals its own transpose). 
+<br />
+<br />
+In order to solve for the lower triangular matrix, we will make use of the Cholesky-Banachiewicz Alogrithm. First, we calculate the values for L on the main diagonal. Subsequently, we calculate the off-diagonals for the elements below the diagonal:
+<br />
+<br />
+\[l_{kk}=\sqrt{a_{kk}-\sum_{j=1}^{k-1}l_{kj}^{2}} \]
+<br />
+<br />
+\[l_{ik}=\frac{1}{l_{kk}}\left(a_{ik}-\sum_{j=1}^{k-1}l_{ij}l_{kj}\right),i>k \]
+<br />
+<br />
+<h2>4. IMPLEMENTATION &amp; SAMPLE COMPUTATION</h2>
+The most efficient method in all development and execution time is to make use of the NumPy/SciPy linear algebra library, which has a built in methods lu, qr and cholesky to decompose a matrix.<br />
+<br />
+Since we are also interested in different times to compute the decomposition, we provide the algorithm in pure Python (i.e. without NumPy/Scipy or any other "ready made" modules).
+<br />
+<br />
+At the beginning of each function we let python check whether the matrix fulfills the properties of each decomposition (e.g. for the cholesky decomposition the matrix has to be symmetric and positive definite).
+<br />
+<br />
+We implemented in each function two different modes. <code>mode = 0</code> returns the final result and <code>mode = 1</code> returns every steps with a short comment, a user who is not familiar with all these decompositions can relive each step.
+<h3>LU decomposition</h3>
+Let us give an expample for the LU decomposition using the following matrix: 
+<br />
+\[A=\begin{pmatrix}6 & 5 & 3 & -10 \\ 3 & 7 & -3 & 5 \\ 12 & 4 & 4 & 4 \\ 0 & 12 & 0 & -8 \end{pmatrix}\]
+<br />
+<br />
+First, we want to have the final decomposition, so we choose <code>mode = 0</code><br />
+<br />
+<code>>>lu_decomposition(A,0)<br />
+Final permutationmatrix is: <br />
+[[ 0.  0.  1.  0.]<br />
+ [ 0.  0.  0.  1.]<br />
+ [ 1.  0.  0.  0.]<br />
+ [ 0.  1.  0.  0.]]<br />
+Final lowertriangularmatrix is: <br />
+[[ 1.    0.    0.    0.  ]<br />
+ [ 0.    1.    0.    0.  ]<br />
+ [ 0.5   0.25  1.    0.  ]<br />
+ [ 0.25  0.5  -4.    1.  ]]<br />
+Final uppertriangularmatrix is: <br />
+[[ 12.   4.   4.   4.]<br />
+ [  0.  12.   0.  -8.]<br />
+ [  0.   0.   1.  10.]<br />
+ [  0.   0.   0.  48.]]</code>
+<br />
+<br />
+Now, we choose <code>mode = 1</code>. As a result we get the following output:
+<br />
+<code>
+>>> lu_decomposition(A,1)<br />
+upper triangular matrix after next step<br />
+[[ 12.   0.   0.   0.]<br />
+ [  0.   0.   0.   0.]<br />
+ [  0.   0.   0.   0.]<br />
+ [  0.   0.   0.   0.]]<br />
+lower triangular matrix after next step<br />
+[[ 1.    0.    0.    0.  ]<br />
+ [ 0.    0.    0.    0.  ]<br />
+ [ 0.5   0.    0.    0.  ]<br />
+ [ 0.25  0.    0.    0.  ]]<br />
+upper triangular matrix after next step<br />
+[[ 12.   4.   0.   0.]<br />
+ [  0.  12.   0.   0.]<br />
+ [  0.   0.   0.   0.]<br />
+ [  0.   0.   0.   0.]]<br />
+lower triangular matrix after next step<br />
+[[ 1.    0.    0.    0.  ]<br />
+ [ 0.    1.    0.    0.  ]<br />
+ [ 0.5   0.25  0.    0.  ]<br />
+ [ 0.25  0.5   0.    0.  ]]<br />
+upper triangular matrix after next step<br />
+[[ 12.   4.   4.   0.]<br />
+ [  0.  12.   0.   0.]<br />
+ [  0.   0.   1.   0.]<br />
+ [  0.   0.   0.   0.]]<br />
+lower triangular matrix after next step<br />
+[[ 1.    0.    0.    0.  ]<br />
+ [ 0.    1.    0.    0.  ]<br />
+ [ 0.5   0.25  1.    0.  ]<br />
+ [ 0.25  0.5  -4.    0.  ]]<br />
+upper triangular matrix after next step<br />
+[[ 12.   4.   4.   4.]<br />
+ [  0.  12.   0.  -8.]<br />
+ [  0.   0.   1.  10.]<br />
+ [  0.   0.   0.  48.]]<br />
+lower triangular matrix after next step<br />
+[[ 1.    0.    0.    0.  ]<br />
+ [ 0.    1.    0.    0.  ]<br />
+ [ 0.5   0.25  1.    0.  ]<br />
+ [ 0.25  0.5  -4.    1.  ]]<br />
+Final permutationmatrix is: <br />
+[[ 0.  0.  1.  0.]<br />
+ [ 0.  0.  0.  1.]<br />
+ [ 1.  0.  0.  0.]<br />
+ [ 0.  1.  0.  0.]]<br />
+Final lowertriangularmatrix is: <br />
+[[ 1.    0.    0.    0.  ]<br />
+ [ 0.    1.    0.    0.  ]<br />
+ [ 0.5   0.25  1.    0.  ]<br />
+ [ 0.25  0.5  -4.    1.  ]]<br />
+Final uppertriangularmatrix is: <br />
+[[ 12.   4.   4.   4.]<br />
+ [  0.  12.   0.  -8.]<br />
+ [  0.   0.   1.  10.]<br />
+ [  0.   0.   0.  48.]]<br />
+</code>
+<h3>4.x QR decomposition</h3>
+modes
+<br />
+<br />
+<h3>4.x Cholesky decomposition</h3>
+modes
+<br />
+<br />
+<h2>5. USED PYTHON MODULES IN THIS PROGRAMM</h2>
+<ul>
+	<li><b>NumPy</b> is adding support for large, multidimensional arrays and matrices.</li>
+    <li><b>math</b> provides functions for specialized mathematical operations, e.g. <code>sqrt</code></li>
+    <li><b>pprint</b> contains a &laquo;pretty printer&raquo; for producing aesthetically pleasing representations of the data structures. The formatter produces representations of data structures that can be parsed correctly by the interpreter, and are also easy to read. The output is kept on a single line, if possible, and indented when split across multiple lines.</li>
+</ul>
+<br />
+<br />
+<h2>6. TESTS OF THE PROGRAM</h2>
+Now, we compare our functions with the built-in function by python. There we are mainly interested in the time which is need to compute matrices with growing dimenions. The results are simply shown in a graph, where we see the efficiency of the two compared functions.
+<br />
+<img src="./img/LU_compare.jpeg" width="50%" height="50%" /> 
+<br />
+See the graphs at the bottom. The results is not surprising, since we expected that our functions **schlecht abschneiden**.
+<br />
+<img src="./img/QR_compare_200.jpeg" width="50%" height="50%" /> 
+<br />
+<h2>7. FINAL REMARK</h2>
+Programing each decompostion was somehow interesting, the surprising part came during the tests of our functions. Even if we expected a bad result, we learned that a implementation could be improved by aspects like efficiency, user-friendly, etc. 
+For bigger computation we should consider methods of implentations which finally takes less time und less memomry capacity requirements. 
+<br />
+<br />
+Now, let be critical and think about how our program can be improved: 
+<ul>
+	<li>The user-frotend could be completed with input query</li>
+    <li>bla bla</li>
+</ul>
+
+
+
